@@ -3,6 +3,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .models import Question, Choice
 from django.views import generic
+from django.utils import timezone
 
 
 class IndexView(generic.ListView):
@@ -15,7 +16,12 @@ class IndexView(generic.ListView):
     context_object_name = 'latest_question_list'
 
     def get_queryset(self):
-        return Question.objects.order_by('-pub_date')[:5]
+        """
+        :return: last 5 question except future qiestions
+        """
+        return Question.objects.filter(
+            pub_date__lte=timezone.now()
+        ).order_by('-pub_date')[:5]
 
 
 class DetailView(generic.DetailView):
@@ -24,6 +30,12 @@ class DetailView(generic.DetailView):
 
     model = Question
     template_name = 'polls/detail.html'
+
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        """
+        return Question.objects.filter(pub_date__lte=timezone.now())
 
 
 class ResultsView(generic.DetailView):
@@ -39,7 +51,7 @@ def vote(request, question_id):
         (KeyError, Choice.DoesNotExist)
         return render(request, 'polls/detail.html', {'question': question,
                                                      'eror_message': "You didn't select a choice."
-                                                    })
+                                                     })
     else:
         selected_choise.votes += 1
         selected_choise.save()
